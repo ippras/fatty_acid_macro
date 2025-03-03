@@ -41,7 +41,7 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
         bounds[index] = indexed.identifier.to_string();
     }
     let expanded = quote! {
-        const #identifier: [&str; #length] = [#(#bounds),*];
+        pub const #identifier: [&str; #length] = [#(#bounds),*];
     };
     TokenStream::from(expanded)
 }
