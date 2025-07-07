@@ -27,5 +27,5 @@ pub(crate) fn tokenize(input: &str) -> VecDeque<Token> {
 #[derive(Clone, Debug)]
 pub(crate) enum Token<'a> {
     Identifier(&'a str),
-    Number(u8),
+    Number(i8),
 }

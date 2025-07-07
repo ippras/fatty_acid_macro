@@ -11,7 +11,7 @@ struct Input {
     attributes: Vec<Attribute>,
     visibility: Visibility,
     identifier: Ident,
-    _semi_token: token::Semi,
+    // _semi_token: token::Semi,
 }
 
 impl Parse for Input {
@@ -19,12 +19,12 @@ impl Parse for Input {
         let attributes = input.call(Attribute::parse_outer)?;
         let visibility = input.parse()?;
         let identifier = input.parse()?;
-        let _semi_token = input.parse()?;
+        // let _semi_token = input.parse()?;
         Ok(Self {
             attributes,
             visibility,
             identifier,
-            _semi_token,
+            // _semi_token,
         })
     }
 }
@@ -42,9 +42,10 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
     let Some(Token::Identifier("C")) = tokens.pop_front() else {
         panic!("the fatty acid must start with the carbons keyword `C`");
     };
-    let Some(Token::Number(carbons)) = tokens.pop_front() else {
+    let Some(Token::Number(carbon)) = tokens.pop_front() else {
         panic!("`C` must be followed by the number of carbons");
     };
+    let carbon = carbon as u8;
     let Some(Token::Identifier("U")) = tokens.pop_front() else {
         panic!("the carbons must be followed by the unsaturated keyword `U`");
     };
@@ -56,19 +57,52 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
         tokens.len(),
         "the unsaturated not equal indices length"
     );
-    let length = carbons as usize - 1;
-    let mut bounds = vec!["S"; length];
+    let mut double_bounds_index = vec![];
+    let mut double_bounds_parity = vec![];
+    let mut triple_bounds_index = vec![];
     while let Some(Token::Identifier(identifier)) = tokens.pop_front() {
         let Some(Token::Number(index)) = tokens.pop_front() else {
             panic!("the unsaturated bound must have an index");
         };
-        bounds[index as usize - 1] = identifier;
+        let index = if index != 0 {
+            quote!(Some(#index))
+        } else {
+            quote!(None)
+        };
+        match identifier {
+            "DC" => {
+                double_bounds_index.push(index);
+                double_bounds_parity.push(quote!(Some(false)));
+            }
+            "DT" => {
+                double_bounds_index.push(index);
+                double_bounds_parity.push(quote!(Some(true)));
+            }
+            "D" => {
+                double_bounds_index.push(index);
+                double_bounds_parity.push(quote!(None));
+            }
+            "T" => {
+                triple_bounds_index.push(index);
+            }
+            identifier => panic!("unexpected identifier {identifier}"),
+        }
     }
-    let identifier = format_ident!("{identifier}");
-    let expanded = quote! {
-        #(#attributes)*
-        #visibility const #identifier: FattyAcid<#length> = FattyAcid([#(#bounds),*]);
-    };
+    // let identifier = format_ident!("{identifier}");
+    let expanded = quote! {{
+        df! {
+            "Carbon" => Series::new(PlSmallStr::EMPTY, [#carbon]),
+            "DoubleBounds" => &[
+                df! {
+                    "Index" => Series::new(PlSmallStr::EMPTY, &[#(#double_bounds_index),*] as &[Option<i8>]),
+                    "Parity" => Series::new(PlSmallStr::EMPTY, &[#(#double_bounds_parity),*] as &[Option<bool>]),
+                }.unwrap().into_struct(PlSmallStr::EMPTY).into_series(),
+            ],
+            "TripleBounds" => &[
+                Series::new(PlSmallStr::EMPTY, &[#(#triple_bounds_index),*] as &[Option<i8>]),
+            ],
+        }.unwrap()
+    }};
     TokenStream::from(expanded)
 }
 
