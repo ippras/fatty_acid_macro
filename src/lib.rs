@@ -1,3 +1,5 @@
+#![feature(strict_overflow_ops)]
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -27,7 +29,7 @@ impl Parse for Input {
 }
 
 struct Entry {
-    index: LitInt,
+    offset: LitInt,
     _arrow_token: Token![=>],
     key: Ident,
 }
@@ -35,7 +37,7 @@ struct Entry {
 impl Parse for Entry {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(Entry {
-            index: input.parse()?,
+            offset: input.parse()?,
             _arrow_token: input.parse()?,
             key: input.parse()?,
         })
@@ -55,55 +57,93 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
         .trim_start_matches('C')
         .parse::<u8>()
         .expect(&format!("parse carbon number, {carbon}"));
-    let mut double_bounds_index = vec![];
-    let mut double_bounds_parity = vec![];
-    let mut triple_bounds_index = vec![];
+    let length = entries.len();
+    let mut index = vec![];
+    let mut parity = vec![];
+    let mut triple = vec![];
     for Entry {
-        index,
+        offset,
         _arrow_token,
         key,
     } in entries
     {
-        let index = index
+        let offset = offset
             .base10_parse::<i8>()
-            .expect(&format!("parse entry index {index}"));
-        let index = if index != 0 {
-            quote!(Some(#index))
-        } else {
-            quote!(None)
+            .expect(&format!("parse entry offset {offset}"));
+        let delta = match offset {
+            omega @ ..0 => carbon - omega.unsigned_abs(),
+            delta @ 0.. => delta as u8,
         };
+        if delta != 0 {
+            index.push(quote!(Some(#delta)));
+        } else {
+            index.push(quote!(None));
+        }
         match &*key.to_string() {
             "D" => {
-                double_bounds_index.push(index);
-                double_bounds_parity.push(quote!(None));
+                parity.push(quote!(None));
+                triple.push(quote!(Some(false)));
             }
             "DC" => {
-                double_bounds_index.push(index);
-                double_bounds_parity.push(quote!(Some(false)));
+                parity.push(quote!(Some(false)));
+                triple.push(quote!(Some(false)));
             }
             "DT" => {
-                double_bounds_index.push(index);
-                double_bounds_parity.push(quote!(Some(true)));
+                parity.push(quote!(Some(true)));
+                triple.push(quote!(Some(false)));
             }
             "T" => {
-                triple_bounds_index.push(index);
+                parity.push(quote!(None));
+                triple.push(quote!(Some(true)));
+            }
+            "U" => {
+                parity.push(quote!(None));
+                triple.push(quote!(None));
             }
             key => panic!("unexpected entry key {key}"),
         }
     }
     let expanded = quote! {{
-        df! {
-            "Carbon" => Series::new(PlSmallStr::EMPTY, [#carbon]),
-            "DoubleBounds" => &[
-                df! {
-                    "Index" => Series::new(PlSmallStr::EMPTY, &[#(#double_bounds_index),*] as &[Option<i8>]),
-                    "Parity" => Series::new(PlSmallStr::EMPTY, &[#(#double_bounds_parity),*] as &[Option<bool>]),
-                }.unwrap().into_struct(PlSmallStr::EMPTY).into_series(),
-            ],
-            "TripleBounds" => &[
-                Series::new(PlSmallStr::EMPTY, &[#(#triple_bounds_index),*] as &[Option<i8>]),
-            ],
-        }.unwrap()
+        (|| -> PolarsResult<_> {
+            let index = {
+                let mut builder = PrimitiveChunkedBuilder::<UInt8Type>::new(INDEX.into(), #length);
+                for index in [#(#index),*] {
+                    builder.append_option(index);
+                }
+                builder.finish()
+            };
+            let parity = {
+                let mut builder = BooleanChunkedBuilder::new(PARITY.into(), #length);
+                for parity in [#(#parity),*] {
+                    builder.append_option(parity);
+                }
+                builder.finish()
+            };
+            let triple = {
+                let mut builder = BooleanChunkedBuilder::new(TRIPLE.into(), #length);
+                for triple in [#(#triple),*] {
+                    builder.append_option(triple);
+                }
+                builder.finish()
+            };
+            let bound = StructChunked::from_series(
+                PlSmallStr::EMPTY,
+                #length,
+                [
+                    index.into_series(),
+                    parity.into_series(),
+                    triple.into_series(),
+                ]
+                .iter(),
+            )?;
+            Ok(AnyValue::StructOwned(Box::new((
+                vec![
+                    AnyValue::UInt8(#carbon),
+                    AnyValue::List(bound.into_series()),
+                ],
+                vec![field!(CARBON), field!(BOUNDS)],
+            ))))
+        })()
     }};
     TokenStream::from(expanded)
 }
