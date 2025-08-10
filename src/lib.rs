@@ -59,8 +59,8 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
         .expect(&format!("parse carbon number, {carbon}"));
     let length = entries.len();
     let mut index = vec![];
-    let mut parity = vec![];
     let mut triple = vec![];
+    let mut parity = vec![];
     for Entry {
         offset,
         _arrow_token,
@@ -80,25 +80,25 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
             index.push(quote!(None));
         }
         match &*key.to_string() {
-            "D" => {
-                parity.push(quote!(None));
+            "C" => {
                 triple.push(quote!(Some(false)));
-            }
-            "DC" => {
                 parity.push(quote!(Some(false)));
-                triple.push(quote!(Some(false)));
-            }
-            "DT" => {
-                parity.push(quote!(Some(true)));
-                triple.push(quote!(Some(false)));
             }
             "T" => {
+                triple.push(quote!(Some(false)));
+                parity.push(quote!(Some(true)));
+            }
+            "O" => {
+                triple.push(quote!(Some(false)));
                 parity.push(quote!(None));
+            }
+            "A" => {
                 triple.push(quote!(Some(true)));
+                parity.push(quote!(None));
             }
             "U" => {
-                parity.push(quote!(None));
                 triple.push(quote!(None));
+                parity.push(quote!(None));
             }
             key => panic!("unexpected entry key {key}"),
         }
@@ -112,17 +112,17 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
                 }
                 builder.finish()
             };
-            let parity = {
-                let mut builder = BooleanChunkedBuilder::new(PARITY.into(), #length);
-                for parity in [#(#parity),*] {
-                    builder.append_option(parity);
-                }
-                builder.finish()
-            };
             let triple = {
                 let mut builder = BooleanChunkedBuilder::new(TRIPLE.into(), #length);
                 for triple in [#(#triple),*] {
                     builder.append_option(triple);
+                }
+                builder.finish()
+            };
+            let parity = {
+                let mut builder = BooleanChunkedBuilder::new(PARITY.into(), #length);
+                for parity in [#(#parity),*] {
+                    builder.append_option(parity);
                 }
                 builder.finish()
             };
@@ -131,8 +131,8 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
                 #length,
                 [
                     index.into_series(),
-                    parity.into_series(),
                     triple.into_series(),
+                    parity.into_series(),
                 ]
                 .iter(),
             )?;

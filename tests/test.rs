@@ -23,7 +23,7 @@ macro_rules! data_type {
         DataType::List(Box::new(data_type!(INDEX)))
     };
     (INDEX) => {
-        DataType::Struct(vec![field!(INDEX), field!(PARITY), field!(TRIPLE)])
+        DataType::Struct(vec![field!(INDEX), field!(TRIPLE), field!(PARITY)])
     };
 }
 
@@ -53,14 +53,14 @@ macro_rules! field {
 
 #[test]
 fn test() -> PolarsResult<()> {
-    let c18u3dc9dt12d15 = fatty_acid!(C18 { 9 => DC, 12 => DT, 15 => D })?;
-    println!("c18u3dc9dt12d15: {c18u3dc9dt12d15}");
+    let c18u3c9t12o15 = fatty_acid!(C18 { 9 => C, 12 => T, 15 => O })?;
+    println!("c18u3c9t12o15: {c18u3c9t12o15}");
     // let c18u0 = fatty_acid!(C18 {});
     // println!("c18u0: {c18u0:?}");
     // let c18u3dc9dt12d15 = fatty_acid!(C18 { 9 => DC, 12 => DT, 15 => D });
     // println!("c18u3dc9dt12d15: {c18u3dc9dt12d15:?}");
-    let c18u3dcn9dtn6dn3 = fatty_acid!(C18 { -9 => DC, -6 => DT, -3 => D })?;
-    println!("c18u3dcn9dtn6dn3: {c18u3dcn9dtn6dn3}");
+    let c18u3_c9_t6_o3 = fatty_acid!(C18 { -9 => C, -6 => T, -3 => O })?;
+    println!("c18u3_c9_t6_o3: {c18u3_c9_t6_o3}");
     // let c18u4dc0dt0d0t0 = fatty_acid!(C18 { 0 => D, 0 => DC, 0 => DT, 0 => T });
     // println!("c18u4dc0dt0d0t0: {c18u4dc0dt0d0t0:?}");
     Ok(())
