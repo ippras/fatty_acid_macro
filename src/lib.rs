@@ -126,7 +126,7 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
                 }
                 builder.finish()
             };
-            let bound = StructChunked::from_series(
+            let item = StructChunked::from_series(
                 PlSmallStr::EMPTY,
                 #length,
                 [
@@ -139,9 +139,9 @@ pub fn fatty_acid(tokens: TokenStream) -> TokenStream {
             Ok(AnyValue::StructOwned(Box::new((
                 vec![
                     AnyValue::UInt8(#carbon),
-                    AnyValue::List(bound.into_series()),
+                    AnyValue::List(item.into_series()),
                 ],
-                vec![field!(CARBON), field!(BOUNDS)],
+                vec![field!(CARBON), field!(INDICES)],
             ))))
         })()
     }};

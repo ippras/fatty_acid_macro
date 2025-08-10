@@ -1,28 +1,28 @@
 use fatty_acid_macro::fatty_acid;
-use polars::{chunked_array::builder::AnonymousOwnedListBuilder, prelude::*};
+use polars::prelude::*;
 
-/// Fatty acid bounds column name
-pub const BOUNDS: &str = "Bounds";
 /// Fatty acid carbon column name
 pub const CARBON: &str = "Carbon";
 /// Fatty acid column name
 pub const FATTY_ACID: &str = "FattyAcid";
-/// Fatty acid bound index column name
+/// Fatty acid index column name
 pub const INDEX: &str = "Index";
-/// Fatty acid bound parity column name
+/// Fatty acid indices column name
+pub const INDICES: &str = "Indices";
+/// Fatty acid parity column name
 pub const PARITY: &str = "Parity";
-/// Fatty acid bound triple column name
+/// Fatty acid triple column name
 pub const TRIPLE: &str = "Triple";
 
 #[macro_export]
 macro_rules! data_type {
     (FATTY_ACID) => {
-        DataType::Struct(vec![field!(CARBON), field!(BOUNDS)])
+        DataType::Struct(vec![field!(CARBON), field!(INDICES)])
     };
-    (BOUNDS) => {
-        DataType::List(Box::new(data_type!(BOUND)))
+    (INDICES) => {
+        DataType::List(Box::new(data_type!(INDEX)))
     };
-    (BOUND) => {
+    (INDEX) => {
         DataType::Struct(vec![field!(INDEX), field!(PARITY), field!(TRIPLE)])
     };
 }
@@ -32,8 +32,8 @@ macro_rules! field {
     (CARBON) => {
         Field::new(PlSmallStr::from_static(CARBON), DataType::UInt8)
     };
-    (BOUNDS) => {
-        Field::new(PlSmallStr::from_static(BOUNDS), data_type!(BOUNDS))
+    (INDICES) => {
+        Field::new(PlSmallStr::from_static(INDICES), data_type!(INDICES))
     };
     (INDEX) => {
         Field::new(PlSmallStr::from_static(INDEX), DataType::Int8)

@@ -1,6 +1,6 @@
 [package]
 name = "fatty_acid_macro"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 
 [lib]
@@ -11,8 +11,8 @@ quote = "1.0.40"
 syn = { version = "2.0.104", features = ["full"] }
 
 [dev-dependencies]
-trybuild = "1.0.106"
-polars = { version = "0.49.1", default-features = false, features = [
+trybuild = "1.0.110"
+polars = { version = "0.50.0", default-features = false, features = [
     "dtype-i8",
     "dtype-struct",
     "dtype-u8",
